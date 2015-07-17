@@ -1,25 +1,109 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "PA1_template.Rmd"
+author: "Dylan van den Berg"
+date: "Tuesday, July 14, 2015"
+output: html_document
 ---
+##Read in the Data
+```{r readdata}
+##Ensure to set working directory to directory with data
+data<- read.csv("activity.csv")
+
+##Create a time sequence based on the interval
+time<-paste(data[,2],"-",floor(data[,3]/100),":",(data[,3] - floor(data[,3]/100)*100), sep="")
+time<-strptime(time,"%Y-%m-%d-%H:%M" )
+time_interval<- paste(floor(data[,3]/100),":",(data[,3] - floor(data[,3]/100)*100), sep="")
+time_interval<-strptime(time_interval,"%H:%M" )
+data<-cbind(data,time,time_interval)
+```
+##What is mean total number of steps taken per day?
+Calculate the steps per day
+```{r stepsperday}
+Steps_per_day<- aggregate(steps ~ date, data = data, sum, na.rm = TRUE)
+```
+Plot a histogram of the steps per day
+```{r stepsperdayplot}
+ hist(as.numeric(Steps_per_day[,2]), main = "Steps per day", xlab = "Steps")
+```
+Calculate and report the mean and the median (SPD)
+```{r stepsperdaymeanmedian}
+mean(Steps_per_day[,2], na.rm = TRUE)
+median(Steps_per_day[,2], na.rm = TRUE)
+```
+
+##What is the average daily activity pattern?
+```{r stepsbyinterval}
+Steps_per_interval<- aggregate(steps ~ time_interval, data = data, mean, na.rm = TRUE)
+##Note that the time interval is used and not the original interval
+plot(x = Steps_per_interval[,1], y = Steps_per_interval[,2], type = "l", xlab = "Time Interval", ylab = "Average Number of Steps per Time Interval", main = "Average Steps per Time Interval")
+```
+Maximum steps in a single time interval (average):
+```{r maxaveragesteps}
+max(Steps_per_interval[,2], na.rm = TRUE) ##What is the max. average steps?
+which.max(Steps_per_interval[,2]) ##Which time interval is the max located?
+```
+
+##Imputing missing values
+Total Number of missing values:
+```{r missingvaluescount}
+na_test<-is.na(data[,1])
+sum(na_test) ##Number of missing values
+```
+Method for inputing data - use average for time interval.
+
+```{r replaceNAwithintervalave}
+##Step through each observation and check if NA
+##If NA, check for value in Steps_per_interval
+##create new_data set
+new_data<- data
+Steps_per_interval_notime<- aggregate(steps ~ interval, data = data, mean, na.rm = TRUE)
+for (i in 1:length(new_data[,1])){   ##Stepping through each steps value
+        if (na_test[i] == TRUE){   ##If a NV value is found then it is changed 
+                if(length(which(Steps_per_interval_notime == new_data[i,3]))> 1){
+                        ##Above code checks if steps value is repeated (only repeated for 0)
+                    new_data[i,1]<- 0  ##There are more than one 0 value, this corrects for it
+                    }
+                 else{
+                new_data[i,1]<- Steps_per_interval_notime[which(Steps_per_interval_notime == new_data[i,3]),2]
+                }
+}
+}
+```
+Calculate the New steps per day
+```{r Newstepsperday}
+New_Steps_per_day<- aggregate(steps ~ date, data = new_data, sum, na.rm = TRUE)
+```
+Plot a histogram of the new steps per day
+```{r newstepsperdayplot}
+ hist(as.numeric(New_Steps_per_day[,2]), main = "New Steps per day", xlab = "Steps")
+```
+Calculate and report the mean and the median (SPD) of New data
+```{r newstepsperdaymeanmedian}
+mean(New_Steps_per_day[,2], na.rm = TRUE)
+median(New_Steps_per_day[,2], na.rm = TRUE)
+```
+##Are there differences in activity patterns between weekdays and weekends?
+```{r dateasfactorplot}
+##Must install: install.packages("timeDate")
+library(timeDate)
+##Add a factor variable for weekdays or weekends
+weekends<- isWeekday(new_data$date)
+days<-weekdays(as.Date(new_data[,2]))
+f_data<-cbind(new_data,days)
+f_data<-cbind(f_data, weekends)
+f_data$weekends<- factor(f_data$weekends, levels = c(FALSE,TRUE), labels = c('weekend','weekday'))
+
+attach(f_data)
+weekend_ave<- aggregate(steps, by=list(interval, weekends), data = f_data, FUN = mean)
+names(weekend_ave)<-c("interval","weekends","ave_steps")
+weekend_ave$weekends<-factor(weekend_ave$weekends, levels = c(FALSE, TRUE), labels = c('weekend','weekday'))
+##Copying over the time series for each time interval:
+ weekend_ave<-cbind(weekend_ave,f_data[1:576,5])
+names(weekend_ave)<-c("interval","weekends","ave_steps","time_interval")
+library(lattice)
+xyplot(ave_steps ~ time_interval | weekends, data = weekend_ave, type = "l", layout = c(1,2), xlab = ("Time Interval"),main = "Time interval shown in hours from 00:00. Date of 17 July is arbitrary")
+
+```
 
 
-## Loading and preprocessing the data
-
-
-
-## What is mean total number of steps taken per day?
-
-
-
-## What is the average daily activity pattern?
-
-
-
-## Imputing missing values
-
-
-
-## Are there differences in activity patterns between weekdays and weekends?
+End of file
