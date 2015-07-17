@@ -4,6 +4,11 @@ author: "Dylan van den Berg"
 date: "Tuesday, July 14, 2015"
 output: html_document
 ---
+```{r setoptions, echo=TRUE}
+require(knitr)
+opts_chunk$set(echo = TRUE, cache = TRUE, cache.path = "cache/", fig.path = "figure/")
+```
+
 ##Read in the Data
 ```{r readdata}
 ##Ensure to set working directory to directory with data
